@@ -1,1 +1,11 @@
-# mpi_vis
+Program used to get data: send_recv.c
+Complie with Makefile. 
+Needs lulush2.0 and set_power
+
+To run experiment: sbatch run_power_sleep.sh
+**Must change path to set_power in the script
+
+Follow aws.pdf instructions to put on an aws ec2 instance
+
+See vis.txt for information about the graph
+

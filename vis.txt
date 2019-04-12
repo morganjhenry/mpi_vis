@@ -1,0 +1,11 @@
+This visualization shows one data file at a time (eg pcap100_sleep_1.js).
+The checkboxes allow filtering of what data is shown. If no boxes are seleced
+in a specific section data will not be filtered on that variable. Refreshing the
+page will reset all filters back to default. 
+
+The data file section allows the selection of which data file is being shown.
+large buff only has buffersize >= 50,000
+
+Axis scale allows switching between log and linear scales for the axis. 
+
+If a point is clicked on the table will be populated with that points raw data.

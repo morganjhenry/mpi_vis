@@ -1,0 +1,16 @@
+This project's goal was to investigate how different variables regarding MPI
+affect the time it takes to run. There are four different MPI protocols: hybrid,
+mvapich, recv and postcopy. This data shows which protocol is fastest when different
+situations occer.
+
+rsleep is the length of calculation done by the receiver and ssleep is length of
+calculation done by the sender. We learned the fastest protocol does not change
+when ssleep==10, rsleep==500 and ssleep==500 and rsleep==10 when the buffersize 
+is large. However, there is a difference in the fastest protocol when buffer sizes
+are small, however the speed up is not large enough to make much of an impact. 
+
+This data does show that increasing the power cap does speed up the run time which 
+is what we expected. When buffer size is larger changing the power cap does not
+change which protocol is faster. With smaller buffersizes power cap can change which
+protocol is faster, however, like sleep values its speed up isn't enough to make a 
+large impact. 

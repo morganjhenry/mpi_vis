@@ -1,0 +1,506 @@
+<!DOCTYPE html>
+<html>
+    <head>
+    <!--Files with JSON data for each run of run_power.sh-->
+    <script src="pcap100_sleep_1.js"></script>
+    <script src="pcap100_sleep_2.js"></script>
+    <script src="pcap100_sleep_3.js"></script>
+    <script src="pcap100_sleep_4.js"></script>
+    <meta charset="UTF-8">
+    </head>
+
+    <body>
+        <div id="scatterplot_1" style="float: left">
+        </div>
+        
+        <div id="legend" style="float: left; margin-left: 40px">
+        <font size="3">
+            Legend<br>
+            <p style="margin-left: 40px">
+            <font color="#4daf4a">&#9;&#9;hybrid</font><br>
+            <font color="#e41a1c">&#9;&#9;mvapich</font><br>
+            <font color="#377eb8">&#9;&#9;recv</font><br>
+            <font color="#984ea3">&#9;&#9;postcopy</font><br>
+            </p>
+        </font>
+        </div>
+
+
+        <div id="boxes" style="float: left; margin-left: 40px">
+        <div id="protos">proto<br></div><br>
+        <div id="rsleep">rsleep<br></div><br>
+        <div id="ssleep">ssleep<br></div><br>
+        <div id="buffsize">buffsize<br></div><br>
+        <div id="pcap">pcap<br></div><br>
+        <form>
+            data files<br>
+            data 1<input type="radio" name="data" class="d1" onclick="changeData()" checked >
+            data 2<input type="radio" name="data" class="d2" onclick="changeData()" >
+            data 3<input type="radio" name="data" class="d3" onclick="changeData()" ><br>
+            large buff<input type="radio" name="data" class="d4" onclick="changeData()" >
+        </form>
+        <br>
+        <form>
+            axis scale<br>
+            y:
+            Linear<input type="radio" name="yaxis" class="ylin" onclick="changeAxis()" checked >
+            Log<input type="radio" name="yaxis" class="ylog" onclick="changeAxis()"> <br>
+            x:
+            Linear<input type="radio" name="xaxis" class="xlin" onclick="changeAxis()" >
+            Log<input type="radio" name="xaxis" class="xlog" onclick="changeAxis()" checked >
+        </form>
+
+
+        <br>
+        <br>
+        Point info:
+          <table>
+        <tr><td>buffsize: </td><td id="table-buf"></td></tr>
+        <tr><td>niters: </td><td id="table-niters"></td></tr>
+        <tr><td>ssleep: </td><td id="table-ssleep"></td></tr>
+        <tr><td>rsleep: </td><td id="table-rsleep"></td></tr>
+        <tr><td>nnodes: </td><td id="table-nnodes"></td></tr>
+        <tr><td>nranks: </td><td id="table-nranks"></td></tr>
+        <tr><td>proto: </td><td id="table-proto"></td></tr>
+        <tr><td>pcap: </td><td id="table-pcap"></td></tr>
+        <tr><td>time: </td><td id="table-time"></td></tr>
+        </table>
+       </div>
+
+
+
+
+
+    </body>
+    <script src="https://d3js.org/d3.v5.min.js"></script>
+    <script>
+
+        //Data the variable used to plot data. data1 is pcap100_sleep1.js
+        var data = data1;
+        //Margins for the graph
+        var margin = {top: 20, right: 20, bottom: 30, left: 50};
+        //size of the graph element
+        var svgHeight = 650;
+        var svgWidth = 1000;
+
+        var width = svgWidth - margin.left - margin.right;
+        var height = svgHeight - margin.top - margin.bottom;
+
+        //append an SVG element to the div scatterplot_1
+        d3.select("#scatterplot_1")
+          .append("svg")
+          .attr("height" , svgHeight)
+          .attr("width" , svgWidth);
+
+
+        //This selects the svg element. This is how we will reference the graph
+        svg4 = d3.select("#scatterplot_1").select("svg");
+
+        
+        //set the colors that are used for the different protocols. They were chosen with color brewer
+        //for categorical data
+        var colors = [d3.rgb("#e41a1c") , d3.rgb("#377eb8") , d3.rgb("#4daf4a") , d3.rgb("#984ea3")];
+        var protos = ["mvapich" , "recv" , "hybrid" , "postcopy"];
+        
+        //returns the corect color given the protocol as a parameter
+        function colorScale(d)
+        {
+            if(d == protos[0]) return colors[0];
+            if(d == protos[1]) return colors[1];
+            if(d == protos[2]) return colors[2];
+            if(d == protos[3]) return colors[3];
+        }
+
+        //fills the table with point data and makes point d larger.
+        //d is the array of all data for a run
+        function showPointData(d, svg)
+        {
+            document.getElementById("table-buf").innerHTML = d.buffsize;
+            document.getElementById("table-niters").innerHTML = d.niters;
+            document.getElementById("table-ssleep").innerHTML = d.ssleep;
+            document.getElementById("table-rsleep").innerHTML = d.rsleep;
+            document.getElementById("table-nnodes").innerHTML = d.nnodes;
+            document.getElementById("table-nranks").innerHTML = d.nranks;
+            document.getElementById("table-proto").innerHTML = d.proto;
+            document.getElementById("table-pcap").innerHTML = d.pcap;
+            document.getElementById("table-time").innerHTML = d.time;
+
+            //gets all points on graphs and if the point is the one that's clicked make it larger
+            svg.selectAll("circle")
+               .filter(function(d2) { return(d2 === d);})
+               .attr("r" , 12);
+
+            //if it's not the one that's click, make it original size
+            svg.selectAll("circle")
+               .filter(function(d2) { return(d2 != d);})
+               .attr("r" , 5);k
+            
+        }
+
+        //determines what the x axis represents. Change the return value to change the axis.
+        function xAxis(d)
+        {
+            return d.buffsize;
+        }
+
+        //determines what the y axis represents. Change the return value to change the axis.
+        function yAxis(d)
+        {
+            return d.time;
+        }
+        
+        //gets the domain for the x values. Only used for initial graph
+        function xDomain(filter)
+        {
+            return d3.extent(data.filter(function (d){return filter(d);}), function(d) {return xAxis(d);})
+        }
+
+        //gets the domain for the y values. Only used for initial graph
+        function yDomain(filter)
+        {
+            return d3.extent(data.filter(function (d){return filter(d);}), function(d) {return yAxis(d);})
+        }
+        
+        //Domain is our data and range is where we're plotting it.
+        //This gets the min and max values from the data for domian.
+        //Range is the size of the graph. 
+        xScale = d3.scaleLog()
+                   .domain(xDomain(function(d){return true}))
+                   .range([margin.left, svgWidth - margin.right]);
+
+        yScale = d3.scaleLinear()
+                   .domain(yDomain(function(d){return true;}))
+                   .range([svgHeight - margin.bottom, margin.top])
+                   .nice();
+
+        //this draws initial graphs -- plots all data points
+        svg4.selectAll("circle").data(data).enter().append("circle")
+            .attr("cx" , function(d) {return xScale(xAxis(d));})
+            .attr("cy" , function(d) {return yScale(yAxis(d));})
+            .attr("r" , 5)
+            .style("fill" , function(d) { return colorScale(d.proto);})
+            .style("stroke" , "black")
+            .on("click" , function(d) { showPointData(d, svg4);});
+
+
+
+        axis(xScale, yScale);
+        //Draws the axis based on the scales
+        function axis(x, y)
+        {
+            svg4.append("g").attr("transform" , "translate(" + margin.left + ", 0)").call(d3.axisLeft(y));
+            svg4.append("g").attr("transform" , "translate(0, " + (height+margin.top) + ")").call(d3.axisBottom(x));
+        }
+
+        //changes the scales to linear or log based on which radio button is checked
+        function changeAxis()
+        {
+            if(d3.select(".xlin").property("checked"))
+            {
+                //keep the same domain and range from before
+                //just apply it to a difference scale type
+                d = xScale.domain();
+                r = xScale.range();
+                newX = d3.scaleLinear().domain(d).range(r);
+                xScale = newX;
+            }
+
+            if(d3.select(".xlog").property("checked"))
+            {
+                d = xScale.domain();
+                r = xScale.range();
+                newX = d3.scaleLog().domain(d).range(r);
+                xScale = newX;
+            }
+
+            if(d3.select(".ylin").property("checked"))
+            {
+                d = yScale.domain();
+                r = yScale.range();
+                newY = d3.scaleLinear().domain(d).range(r);
+                yScale = newY;
+            }
+
+            if(d3.select(".ylog").property("checked"))
+            {
+                d = yScale.domain();
+                r = yScale.range();
+                newY = d3.scaleLog().domain(d).range(r);
+                yScale = newY;
+            }
+
+            //redraw with the new axis
+            update();
+            
+        }
+
+        //change which data file is being shown.
+        //Set the data variable to the correct data array from the JSON files
+        function changeData()
+        {
+            if(d3.select(".d1").property("checked"))
+                data = data1;
+            if(d3.select(".d2").property("checked"))
+                data = data2;
+            if(d3.select(".d3").property("checked"))
+                data = data3;
+            if(d3.select(".d4").property("checked"))
+                data = data4;
+
+             //redraw the data
+             update();
+                
+        }
+
+        function update()
+        {
+            //For all check boxes, if the option is checked push it onto an array
+            //if nothing in checked, push all values onto array
+
+
+            proto = [];
+            if(d3.select(".hybrid").property("checked"))
+                proto.push("hybrid");
+            if(d3.select(".mvapich").property("checked"))
+                proto.push("mvapich");
+            if(d3.select(".postcopy").property("checked"))
+                proto.push("postcopy");
+            if(d3.select(".recv").property("checked"))
+                proto.push("recv");
+            if(proto.length == 0)
+	    {
+                proto = ["hybrid" , "postcopy" , "recv" , "mvapich"];
+            }
+
+            rsleep = [];
+            if(d3.select(".tr").property("checked"))
+                rsleep.push(10);
+            if(d3.select(".fr").property("checked"))
+                rsleep.push(50);
+            if(d3.select(".hr").property("checked"))
+                rsleep.push(100);
+            if(d3.select(".fhr").property("checked"))
+                rsleep.push(500);
+            if(rsleep.length == 0)
+	    {
+                rsleep = [10, 50, 100, 500];
+            }
+
+            ssleep = [];
+            if(d3.select(".ts").property("checked"))
+                ssleep.push(10);
+            if(d3.select(".fs").property("checked"))
+                ssleep.push(50);
+            if(d3.select(".hs").property("checked"))
+                ssleep.push(100);
+            if(d3.select(".fhs").property("checked"))
+                ssleep.push(500);
+            if(ssleep.length == 0)
+	    {
+                ssleep = [10, 50, 100, 500];
+            }
+
+            buffs = [];
+            if(d3.select(".b1").property("checked"))
+            {
+                buffs.push(1000);
+                buffs.push(2000);
+                buffs.push(5000);
+            }
+            if(d3.select(".b2").property("checked"))
+            {
+                buffs.push(10000);
+                buffs.push(20000);
+                buffs.push(50000);
+            }
+            if(d3.select(".b3").property("checked"))
+            {
+                buffs.push(550000);
+                buffs.push(1050000);
+
+                buffs.push(50000);
+                buffs.push(100000);
+                buffs.push(500000);
+                buffs.push(600000);
+                buffs.push(700000);
+                buffs.push(800000);
+                buffs.push(900000);
+                buffs.push(1000000);
+            }
+            if(buffs.length == 0)
+	    {
+                buffs = [1000, 2000, 5000, 10000, 20000, 50000, 550000, 1050000, 50000, 100000, 500000, 600000, 700000, 800000, 900000, 1000000];
+            }
+
+            pcap = [];
+            if(d3.select(".p1").property("checked"))
+                pcap.push(50);
+            if(d3.select(".p2").property("checked"))
+                pcap.push(70);
+            if(d3.select(".p3").property("checked"))
+                pcap.push(90);
+            if(pcap.length == 0)
+	        pcap = [50, 70, 90];
+
+           //we create new data that is the same data we had before but filtered.
+           //Only runs with variables in the lists made above will bew in new_data
+           new_data = data.filter(function(d){
+                        return proto.includes(d.proto) &&
+                               rsleep.includes(d.rsleep) &&
+                               ssleep.includes(d.ssleep) &&
+                               buffs.includes(d.buffsize) &&
+                               pcap.includes(d.pcap);
+
+                      })
+            
+            //set the scales (used to plot points and draw axis) to represent new filtered data
+            xScale.domain(d3.extent(new_data, function(d){return xAxis(d);}));
+            yScale.domain(d3.extent(new_data, function(d){return yAxis(d);}));
+
+            //remove previous axis and redraw
+            svg4.selectAll("g").remove();
+            axis(xScale, yScale); 
+
+            //select all the circles and attached our new data
+            circle = svg4.selectAll("circle")
+                         .data(new_data)
+
+            //update any circles currently drawn to reflect change
+            circle
+                  .attr("cx" , function(d) {return xScale(xAxis(d));})
+                  .attr("cy" , function(d) {return yScale(yAxis(d));})
+                  .attr("r" , 5)
+                  .style("fill" , function(d) { return colorScale(d.proto);})
+                  .style("stroke" , "black")
+                  .on("click" , function(d) { showPointData(d, svg4);});
+
+            //draw new cirlces that did not previously have a data point on the graph
+            circle.enter()
+                  .append("circle")
+                  .attr("cx" , function(d) {return xScale(xAxis(d));})
+                  .attr("cy" , function(d) {return yScale(yAxis(d));})
+                  .attr("r" , 5)
+                  .style("fill" , function(d) { return colorScale(d.proto);})
+                  .style("stroke" , "black")
+                  .on("click" , function(d) { showPointData(d, svg4);});
+             
+             //remove any data point that is no longer in the data set. 
+             circle.exit().remove();
+            
+        }
+
+        //add check box. This can be done in HTML
+        function addCheckBox(div, boxes)
+        {
+            d3.select(div)
+              .selectAll("input")
+              .data(boxes)
+              .enter()
+              .append("label")
+              .text(function(d){return d.name;})
+              .append("input")
+              .attr("type" , "checkbox")
+              .attr("class" , function(d) {return d.id})
+              .on("click" , update);
+        }
+          
+        //arrays that describe the check boxes we want
+        var protoBoxes= [
+            {
+                name: "hybrid",
+                id: "hybrid",
+            },
+            {
+                name: "mvapich",
+                id: "mvapich",
+            },
+            {
+                name: "recv",
+                id: "recv",
+            },
+            {
+                name: "postcopy",
+                id: "postcopy",
+            }
+        ];
+        addCheckBox("#protos" , protoBoxes);
+    
+        var rsleepBoxes= [
+            {
+                name: "10",
+                id: "tr",
+            },
+            {
+                name: "50",
+                id: "fr",
+            },
+            {
+                name: "100",
+                id: "hr",
+            },
+            {
+                name: "500",
+                id: "fhr",
+            }
+        ];
+
+        addCheckBox("#rsleep" , rsleepBoxes);
+
+        var ssleepBoxes= [
+            {
+                name: "10",
+                id: "ts",
+            },
+            {
+                name: "50",
+                id: "fs",
+            },
+            {
+                name: "100",
+                id: "hs",
+            },
+            {
+                name: "500",
+                id: "fhs",
+            }
+        ];
+
+        addCheckBox("#ssleep" , ssleepBoxes);
+
+        var buffsizeBoxes= [
+            {
+                name: "1,000 - 5,000",
+                id: "b1",
+            },
+            {
+                name: "10,000 - 50,000",
+                id: "b2",
+            },
+            {
+                name: "500,000 - 1,050,000",
+                id: "b3",
+            }
+        ];
+
+        addCheckBox("#buffsize" , buffsizeBoxes);
+
+        var pcapBoxes= [
+            {
+                name: "50",
+                id: "p1",
+            },
+            {
+                name: "70",
+                id: "p2",
+            },
+            {
+                name: "90",
+                id: "p3",
+            }
+        ];
+
+        addCheckBox("#pcap" , pcapBoxes);
+
+    </script>
+
+</html>

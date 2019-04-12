@@ -9,3 +9,5 @@ Follow aws.pdf instructions to put on an aws ec2 instance
 
 See vis.txt for information about the graph
 
+variance.py determines the variance between different runs
+

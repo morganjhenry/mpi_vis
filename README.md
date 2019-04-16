@@ -1,5 +1,5 @@
 Program used to get data: send_recv.c
-Complie with Makefile. 
+Compile with Makefile. 
 Needs lulush2.0 and set_power
 
 To run experiment: sbatch run_power_sleep.sh
